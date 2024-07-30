@@ -68,6 +68,12 @@ void findRedirect(char *args[]) {               // リダイレクトの指示�
 }
 
 void redirect(int fd, char *path, int flag) {   // リダイレクト処理をする
+  close(fd);
+  fd = open(path,flag,0644);
+  if(fd<0){
+    perror(path);
+    exit(1);
+  }
   //
   // externalCom 関数のどこかから呼び出される
   //
@@ -85,7 +91,11 @@ void externalCom(char *args[]) {                // 外部コマンドを実行�
     perror("fork");                             //     fork 失敗
     exit(1);                                    //     非常事態，親を終了
   }
-  if (pid==0) {                                 //   子プロセスなら
+  if (pid==0) {     
+    if(ifile != NULL)
+      redirect(0,ifile,O_RDONLY);
+    if(ofile != NULL)
+      redirect(1,ofile,O_WRONLY|O_TRUNC|O_CREAT);//   子プロセスなら
     execvp(args[0], args);                      //     コマンドを実行
     perror(args[0]);
     exit(1);
@@ -130,3 +140,21 @@ int main() {
   return 0;
 }
 
+/*
+yonedafuuta@yonedafuunoMacBook-Pro kadai12-i21yoneda % make
+cc -D_GNU_SOURCE -Wall -std=c99 -o myshell myshell.c
+yonedafuuta@yonedafuunoMacBook-Pro kadai12-i21yoneda % ./myshell 
+Command: ls > a.txt
+Command: grep .txt < a.txt
+a.txt
+Command: ls >
+Makefile	README.md	README.pdf	a.txt		myshell		myshell.c
+Command: cd >
+Usage: cd DIR
+Command: ls > b.txt
+Command: cd
+Usage: cd DIR
+Command: ls >
+Makefile	README.md	README.pdf	a.txt		b.txt		myshell		myshell.c
+Command: 
+*/
